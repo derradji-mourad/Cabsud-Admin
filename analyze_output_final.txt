@@ -1,0 +1,39 @@
+﻿Analyzing Cabsud-Admin...                                       
+
+   info - The imported package 'shared_preferences' isn't a dependency of the importing package - lib\auth\login.dart:3:8 - depend_on_referenced_packages
+   info - Parameter 'key' could be a super parameter - lib\auth\login.dart:10:9 - use_super_parameters
+   info - Statements in an if should be enclosed in a block - lib\auth\login.dart:224:23 - curly_braces_in_flow_control_structures
+   info - Parameter 'key' could be a super parameter - lib\auth\signin.dart:7:9 - use_super_parameters
+   info - Statements in an if should be enclosed in a block - lib\auth\signin.dart:148:23 - curly_braces_in_flow_control_structures
+   info - Parameter 'key' could be a super parameter - lib\features\add_driver\add_driver_page.dart:8:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\add_driver\add_driver_page.dart:67:32 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\add_driver\add_driver_page.dart:84:32 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\add_driver\add_driver_page.dart:94:30 - use_build_context_synchronously
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\features\add_driver\add_driver_page.dart:305:23 - deprecated_member_use
+   info - Parameter 'key' could be a super parameter - lib\features\all_drivers\all_drivers_page.dart:8:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\features\fare_management\fare_management_page.dart:9:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\fare_management\fare_management_page.dart:64:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\fare_management\fare_management_page.dart:80:30 - use_build_context_synchronously
+   info - Parameter 'key' could be a super parameter - lib\features\live_requests\live_requests_page.dart:16:9 - use_super_parameters
+   info - The private field _notifiedRequestIds could be 'final' - lib\features\live_requests\live_requests_page.dart:26:15 - prefer_final_fields
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:74:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:86:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:141:7 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:177:11 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:201:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:212:9 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:299:7 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:301:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:339:32 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:360:7 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:362:9 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\features\live_requests\request_details_page.dart:91:7 - avoid_print
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\features\live_requests\request_details_page.dart:113:44 - deprecated_member_use
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\features\live_requests\request_details_page.dart:163:51 - deprecated_member_use
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\features\live_requests\request_details_page.dart:167:52 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\features\live_requests\request_details_page.dart:217:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\live_requests\request_details_page.dart:250:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\live_requests\request_details_page.dart:253:7 - avoid_print
+   info - Parameter 'key' could be a super parameter - lib\features\request_history\request_history_page.dart:8:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\layout\dashboard_layout.dart:16:9 - use_super_parameters
+

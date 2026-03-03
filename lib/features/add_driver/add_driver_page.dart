@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../theme/app_colors.dart';
+
 class AddDriverPage extends StatefulWidget {
   const AddDriverPage({Key? key}) : super(key: key);
 
@@ -11,6 +13,7 @@ class AddDriverPage extends StatefulWidget {
 
 class _AddDriverPageState extends State<AddDriverPage> {
   final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
 
   // Form fields
   String firstName = '';
@@ -28,11 +31,13 @@ class _AddDriverPageState extends State<AddDriverPage> {
       'https://utypxmgyfqfwlkpkqrff.supabase.co/functions/v1/add-driver';
 
   final String supabaseApiKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU'; // Store securely in prod!
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU';
 
   Future<void> saveDriver() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
+
+    setState(() => _isSubmitting = true);
 
     final newDriver = {
       "identifier": identifier,
@@ -60,130 +65,348 @@ class _AddDriverPageState extends State<AddDriverPage> {
       if (response.statusCode == 201) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Driver added successfully!')),
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.success),
+                  const SizedBox(width: 12),
+                  const Text('Driver added successfully!'),
+                ],
+              ),
+              backgroundColor: AppColors.surface,
+            ),
           );
           _formKey.currentState?.reset();
+          setState(() => isAvailable = true);
         }
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${response.body}')),
+            SnackBar(
+              content: Text('Error: ${response.body}'),
+              backgroundColor: AppColors.error,
+            ),
           );
         }
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  Widget _buildInputField({
-    required String label,
-    required FormFieldSetter<String> onSaved,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: TextFormField(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-        validator: validator,
-        onSaved: onSaved,
-        keyboardType: keyboardType,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Add Driver')),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              children: [
-                _buildInputField(
-                  label: 'Identifier',
-                  onSaved: (v) => identifier = v!.trim(),
-                  validator: (v) => v == null || v.isEmpty ? 'Enter identifier' : null,
-                ),
-                _buildInputField(
-                  label: 'Secret Code',
-                  onSaved: (v) => secretCode = v!.trim(),
-                  validator: (v) => v == null || v.isEmpty ? 'Enter secret code' : null,
-                ),
-                _buildInputField(
-                  label: 'First Name',
-                  onSaved: (v) => firstName = v!.trim(),
-                  validator: (v) => v == null || v.isEmpty ? 'Enter first name' : null,
-                ),
-                _buildInputField(
-                  label: 'Last Name',
-                  onSaved: (v) => lastName = v!.trim(),
-                  validator: (v) => v == null || v.isEmpty ? 'Enter last name' : null,
-                ),
-                _buildInputField(
-                  label: 'Phone Number',
-                  keyboardType: TextInputType.phone,
-                  onSaved: (v) => phoneNumber = v!.trim(),
-                  validator: (v) => v == null || v.isEmpty ? 'Enter phone number' : null,
-                ),
-                _buildInputField(
-                  label: 'Email',
-                  keyboardType: TextInputType.emailAddress,
-                  onSaved: (v) => email = v!.trim(),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Enter email';
-                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                    if (!emailRegex.hasMatch(v)) return 'Enter valid email';
-                    return null;
-                  },
-                ),
-                _buildInputField(
-                  label: 'Address',
-                  onSaved: (v) => address = v ?? '',
-                ),
-                _buildInputField(
-                  label: 'Driving License Number',
-                  onSaved: (v) => drivingLicenseNumber = v!.trim(),
-                  validator: (v) => v == null || v.isEmpty ? 'Enter license number' : null,
-                ),
-                _buildInputField(
-                  label: 'Contract Number',
-                  onSaved: (v) => contractNumber = v ?? '',
-                ),
-                const SizedBox(height: 10),
-                SwitchListTile(
-                  title: const Text('Available'),
-                  value: isAvailable,
-                  onChanged: (val) => setState(() => isAvailable = val),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: saveDriver,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Save Driver'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 280),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Account Section
+              _buildSectionHeader(
+                'Account Information',
+                Icons.account_circle_outlined,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInputField(
+                      label: 'Identifier',
+                      icon: Icons.badge_outlined,
+                      onSaved: (v) => identifier = v!.trim(),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
                     ),
                   ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildInputField(
+                      label: 'Secret Code',
+                      icon: Icons.lock_outlined,
+                      onSaved: (v) => secretCode = v!.trim(),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
+                      obscure: true,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Personal Section
+              _buildSectionHeader(
+                'Personal Information',
+                Icons.person_outlined,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInputField(
+                      label: 'First Name',
+                      icon: Icons.person_outlined,
+                      onSaved: (v) => firstName = v!.trim(),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildInputField(
+                      label: 'Last Name',
+                      icon: Icons.person_outlined,
+                      onSaved: (v) => lastName = v!.trim(),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInputField(
+                      label: 'Phone Number',
+                      icon: Icons.phone_outlined,
+                      keyboardType: TextInputType.phone,
+                      onSaved: (v) => phoneNumber = v!.trim(),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildInputField(
+                      label: 'Email',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                      onSaved: (v) => email = v!.trim(),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Required';
+                        final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                        if (!emailRegex.hasMatch(v)) return 'Invalid email';
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildInputField(
+                label: 'Address',
+                icon: Icons.location_on_outlined,
+                onSaved: (v) => address = v ?? '',
+              ),
+
+              const SizedBox(height: 32),
+
+              // License Section
+              _buildSectionHeader(
+                'License & Contract',
+                Icons.description_outlined,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInputField(
+                      label: 'Driving License Number',
+                      icon: Icons.credit_card_outlined,
+                      onSaved: (v) => drivingLicenseNumber = v!.trim(),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildInputField(
+                      label: 'Contract Number',
+                      icon: Icons.article_outlined,
+                      onSaved: (v) => contractNumber = v ?? '',
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Availability Toggle
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.3),
+                  ),
                 ),
-              ],
-            ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: isAvailable
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.error.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isAvailable ? Icons.check_circle : Icons.cancel,
+                        color: isAvailable
+                            ? AppColors.success
+                            : AppColors.error,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Availability Status',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isAvailable
+                                ? 'Driver is available for trips'
+                                : 'Driver is not available',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: isAvailable,
+                      onChanged: (val) => setState(() => isAvailable = val),
+                      activeColor: AppColors.success,
+                      activeTrackColor: AppColors.success.withValues(
+                        alpha: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Submit Button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : saveDriver,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: AppColors.primary,
+                    disabledBackgroundColor: AppColors.gold.withValues(
+                      alpha: 0.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.person_add),
+                            SizedBox(width: 10),
+                            Text(
+                              'Add Driver',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+            ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.gold.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.gold, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInputField({
+    required String label,
+    required IconData icon,
+    required FormFieldSetter<String> onSaved,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+    bool obscure = false,
+  }) {
+    return TextFormField(
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: AppColors.surface,
+      ),
+      validator: validator,
+      onSaved: onSaved,
+      keyboardType: keyboardType,
+      obscureText: obscure,
     );
   }
 }

@@ -1,0 +1,44 @@
+﻿Analyzing Cabsud-Admin...                                       
+
+   info - The imported package 'shared_preferences' isn't a dependency of the importing package - lib\auth\login.dart:3:8 - depend_on_referenced_packages
+   info - Parameter 'key' could be a super parameter - lib\auth\login.dart:10:9 - use_super_parameters
+   info - Statements in an if should be enclosed in a block - lib\auth\login.dart:224:23 - curly_braces_in_flow_control_structures
+   info - Parameter 'key' could be a super parameter - lib\auth\signin.dart:7:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\features\add_driver\add_driver_page.dart:8:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\add_driver\add_driver_page.dart:67:32 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\add_driver\add_driver_page.dart:84:32 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\add_driver\add_driver_page.dart:94:30 - use_build_context_synchronously
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\features\add_driver\add_driver_page.dart:305:23 - deprecated_member_use
+   info - Parameter 'key' could be a super parameter - lib\features\all_drivers\all_drivers_page.dart:8:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\features\fare_management\fare_management_page.dart:9:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\fare_management\fare_management_page.dart:64:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\fare_management\fare_management_page.dart:80:30 - use_build_context_synchronously
+   info - Parameter 'key' could be a super parameter - lib\features\live_requests\live_requests_page.dart:16:9 - use_super_parameters
+   info - The private field _notifiedRequestIds could be 'final' - lib\features\live_requests\live_requests_page.dart:26:15 - prefer_final_fields
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:74:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:86:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:141:7 - avoid_print
+warning - The operand can't be 'null', so the condition is always 'false' - lib\features\live_requests\live_requests_page.dart:150:18 - unnecessary_null_comparison
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:178:11 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:202:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:213:9 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:300:7 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:302:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:340:32 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\features\live_requests\live_requests_page.dart:361:7 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\features\live_requests\live_requests_page.dart:363:9 - use_build_context_synchronously
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\live_requests\request_details_page.dart:89:20 - unnecessary_null_comparison
+warning - Unnecessary type check; the result is always 'true' - lib\features\live_requests\request_details_page.dart:89:31 - unnecessary_type_check
+   info - Don't invoke 'print' in production code - lib\features\live_requests\request_details_page.dart:93:7 - avoid_print
+   info - Uses 'await' on an instance of 'RealtimeChannel', which is not a subtype of 'Future' - lib\features\live_requests\request_details_page.dart:109:5 - await_only_futures
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\features\live_requests\request_details_page.dart:115:44 - deprecated_member_use
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\features\live_requests\request_details_page.dart:165:51 - deprecated_member_use
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\features\live_requests\request_details_page.dart:169:52 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\features\live_requests\request_details_page.dart:219:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\live_requests\request_details_page.dart:252:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\live_requests\request_details_page.dart:255:7 - avoid_print
+   info - Parameter 'key' could be a super parameter - lib\features\request_history\request_history_page.dart:8:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\layout\dashboard_layout.dart:16:9 - use_super_parameters
+warning - The operand can't be 'null', so the condition is always 'true' - lib\layout\dashboard_layout.dart:64:25 - unnecessary_null_comparison
+   info - Invalid use of a private type in a public API - lib\layout\sidebar_menu.dart:18:14 - library_private_types_in_public_api
+

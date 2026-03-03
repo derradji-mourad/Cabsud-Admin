@@ -21,7 +21,8 @@ class _SignUpPageState extends State<SignUpPage> {
   bool isLoading = false;
 
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   final String supabaseUrl = 'https://utypxmgyfqfwlkpkqrff.supabase.co';
   final String supabaseAnonKey =
@@ -45,9 +46,9 @@ class _SignUpPageState extends State<SignUpPage> {
     _formKey.currentState!.save();
 
     if (passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
       return;
     }
 
@@ -62,15 +63,11 @@ class _SignUpPageState extends State<SignUpPage> {
       final user = signUpResponse.user;
       if (user == null) throw Exception('Sign up failed');
 
-      final insertResponse = await supabase.from('admin').insert({
+      await supabase.from('admin').insert({
         'user_id': user.id,
         'full_name': fullName,
         'phone': phone,
       });
-
-      if (insertResponse.error != null) {
-        throw Exception('Failed to insert admin data: ${insertResponse.error!.message}');
-      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -83,9 +80,9 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -105,12 +102,15 @@ class _SignUpPageState extends State<SignUpPage> {
                 const SizedBox(height: 30),
                 TextFormField(
                   decoration: const InputDecoration(labelText: 'Full Name'),
-                  validator: (v) => v == null || v.isEmpty ? 'Enter your full name' : null,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Enter your full name' : null,
                   onSaved: (v) => fullName = v!.trim(),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  decoration: const InputDecoration(labelText: 'Phone (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Phone (optional)',
+                  ),
                   keyboardType: TextInputType.phone,
                   onSaved: (v) => phone = v?.trim() ?? '',
                 ),
@@ -131,17 +131,21 @@ class _SignUpPageState extends State<SignUpPage> {
                   controller: passwordController,
                   decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
-                  validator: (v) =>
-                  v == null || v.length < 6 ? 'Password too short (min 6 chars)' : null,
+                  validator: (v) => v == null || v.length < 6
+                      ? 'Password too short (min 6 chars)'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: confirmPasswordController,
-                  decoration: const InputDecoration(labelText: 'Confirm Password'),
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm Password',
+                  ),
                   obscureText: true,
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Confirm your password';
-                    if (v != passwordController.text) return 'Passwords do not match';
+                    if (v != passwordController.text)
+                      return 'Passwords do not match';
                     return null;
                   },
                 ),
