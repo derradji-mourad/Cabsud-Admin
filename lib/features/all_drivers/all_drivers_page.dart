@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../config/supabase_config.dart';
 import '../../theme/app_colors.dart';
 
 class DriversPage extends StatefulWidget {
@@ -16,11 +17,8 @@ class _DriversPageState extends State<DriversPage> {
   bool isLoading = true;
   String? error;
 
-  final String supabaseEdgeUrl =
-      'https://utypxmgyfqfwlkpkqrff.supabase.co/functions/v1/get-drivers';
-
-  final String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU';
+  final String supabaseEdgeUrl = SupabaseConfig.getDriversFn;
+  final String supabaseAnonKey = SupabaseConfig.anonKey;
 
   @override
   void initState() {
@@ -64,34 +62,30 @@ class _DriversPageState extends State<DriversPage> {
     }
   }
 
-  Widget buildDriverCard(Map<String, dynamic> driver, int index) {
+  Widget buildDriverCard(
+    Map<String, dynamic> driver,
+    int index, {
+    required bool isVerySmall,
+    required double cardPadding,
+    required double avatarSize,
+    required double nameFontSize,
+    required double spacing,
+  }) {
     final isAvailable = driver['isavailable'] == true;
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 280),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final isVerySmall = width < 400;
-          final isSmall = width < 600;
-
-          // Adaptive dimensions
-          final cardPadding = isVerySmall ? 12.0 : (isSmall ? 16.0 : 20.0);
-          final avatarSize = isVerySmall ? 44.0 : 56.0;
-          final nameFontSize = isVerySmall ? 16.0 : 18.0;
-          final spacing = isVerySmall ? 8.0 : (isSmall ? 12.0 : 16.0);
-
-          return Container(
-            margin: EdgeInsets.only(bottom: isVerySmall ? 12 : 16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(isVerySmall ? 12 : 16),
-              border: Border.all(
-                color: AppColors.border.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(cardPadding),
+      child: Container(
+        margin: EdgeInsets.only(bottom: isVerySmall ? 12 : 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(isVerySmall ? 12 : 16),
+          border: Border.all(
+            color: AppColors.border.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(cardPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -288,10 +282,8 @@ class _DriversPageState extends State<DriversPage> {
                 ],
               ),
             ),
-          );
-        },
-      ),
-    );
+          ),
+      );
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
@@ -454,6 +446,15 @@ class _DriversPageState extends State<DriversPage> {
       );
     }
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth - 40;
+    final isVerySmall = cardWidth < 400;
+    final isSmall = cardWidth < 600;
+    final cardPadding = isVerySmall ? 12.0 : (isSmall ? 16.0 : 20.0);
+    final avatarSize = isVerySmall ? 44.0 : 56.0;
+    final nameFontSize = isVerySmall ? 16.0 : 18.0;
+    final spacing = isVerySmall ? 8.0 : (isSmall ? 12.0 : 16.0);
+
     return RefreshIndicator(
       onRefresh: fetchDrivers,
       color: AppColors.gold,
@@ -462,7 +463,15 @@ class _DriversPageState extends State<DriversPage> {
         padding: const EdgeInsets.all(20),
         itemCount: drivers.length,
         itemBuilder: (context, index) {
-          return buildDriverCard(drivers[index], index);
+          return buildDriverCard(
+            drivers[index],
+            index,
+            isVerySmall: isVerySmall,
+            cardPadding: cardPadding,
+            avatarSize: avatarSize,
+            nameFontSize: nameFontSize,
+            spacing: spacing,
+          );
         },
       ),
     );

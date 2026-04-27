@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../config/supabase_config.dart';
 import '../../theme/app_colors.dart';
 
 class FareManagementPage extends StatefulWidget {
@@ -17,8 +18,7 @@ class _FareManagementPageState extends State<FareManagementPage> {
   List<Map<String, dynamic>> fares = [];
   bool isLoading = true;
 
-  final String edgeFunctionUrl =
-      'https://utypxmgyfqfwlkpkqrff.supabase.co/functions/v1/modifier-fare';
+  final String edgeFunctionUrl = SupabaseConfig.modifierFareFn;
 
   final Map<String, IconData> categoryIcons = {
     'standard': Icons.directions_car,
@@ -88,83 +88,11 @@ class _FareManagementPageState extends State<FareManagementPage> {
   }
 
   void showEditDialog(Map<String, dynamic> fare) {
-    final baseFareCtrl = TextEditingController(
-      text: fare['base_fare'].toString(),
-    );
-    final perKmCtrl = TextEditingController(
-      text: fare['price_per_km'].toString(),
-    );
-    final perMinCtrl = TextEditingController(
-      text: fare['price_per_minute'].toString(),
-    );
-
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.secondary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.edit, color: AppColors.gold),
-            ),
-            const SizedBox(width: 14),
-            Text('Edit ${fare['category'].toString().toUpperCase()}'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDialogField(baseFareCtrl, 'Base Fare', Icons.attach_money),
-              const SizedBox(height: 16),
-              _buildDialogField(perKmCtrl, 'Price per KM', Icons.straighten),
-              const SizedBox(height: 16),
-              _buildDialogField(perMinCtrl, 'Price per Minute', Icons.timer),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updated = {
-                'id': fare['id'],
-                'base_fare': double.tryParse(baseFareCtrl.text) ?? 0.0,
-                'price_per_km': double.tryParse(perKmCtrl.text) ?? 0.0,
-                'price_per_minute': double.tryParse(perMinCtrl.text) ?? 0.0,
-              };
-              Navigator.pop(context);
-              updateFareOnServer(updated);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDialogField(
-    TextEditingController controller,
-    String label,
-    IconData icon,
-  ) {
-    return TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        filled: true,
-        fillColor: AppColors.surface,
+      builder: (_) => _FareEditDialog(
+        fare: fare,
+        onSave: updateFareOnServer,
       ),
     );
   }
@@ -449,6 +377,114 @@ class _FareManagementPageState extends State<FareManagementPage> {
       itemBuilder: (context, index) {
         return buildFareCard(fares[index]);
       },
+    );
+  }
+}
+
+class _FareEditDialog extends StatefulWidget {
+  final Map<String, dynamic> fare;
+  final Future<void> Function(Map<String, dynamic>) onSave;
+
+  const _FareEditDialog({required this.fare, required this.onSave});
+
+  @override
+  State<_FareEditDialog> createState() => _FareEditDialogState();
+}
+
+class _FareEditDialogState extends State<_FareEditDialog> {
+  late final TextEditingController baseFareCtrl;
+  late final TextEditingController perKmCtrl;
+  late final TextEditingController perMinCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    baseFareCtrl = TextEditingController(
+      text: widget.fare['base_fare'].toString(),
+    );
+    perKmCtrl = TextEditingController(
+      text: widget.fare['price_per_km'].toString(),
+    );
+    perMinCtrl = TextEditingController(
+      text: widget.fare['price_per_minute'].toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    baseFareCtrl.dispose();
+    perKmCtrl.dispose();
+    perMinCtrl.dispose();
+    super.dispose();
+  }
+
+  Widget _buildField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+  ) {
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: AppColors.surface,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.secondary,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.edit, color: AppColors.gold),
+          ),
+          const SizedBox(width: 14),
+          Text('Edit ${widget.fare['category'].toString().toUpperCase()}'),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildField(baseFareCtrl, 'Base Fare', Icons.attach_money),
+            const SizedBox(height: 16),
+            _buildField(perKmCtrl, 'Price per KM', Icons.straighten),
+            const SizedBox(height: 16),
+            _buildField(perMinCtrl, 'Price per Minute', Icons.timer),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final updated = {
+              'id': widget.fare['id'],
+              'base_fare': double.tryParse(baseFareCtrl.text) ?? 0.0,
+              'price_per_km': double.tryParse(perKmCtrl.text) ?? 0.0,
+              'price_per_minute': double.tryParse(perMinCtrl.text) ?? 0.0,
+            };
+            Navigator.pop(context);
+            widget.onSave(updated);
+          },
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

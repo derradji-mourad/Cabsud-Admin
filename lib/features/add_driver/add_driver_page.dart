@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../config/supabase_config.dart';
 import '../../theme/app_colors.dart';
 
 class AddDriverPage extends StatefulWidget {
@@ -27,11 +28,8 @@ class _AddDriverPageState extends State<AddDriverPage> {
   String identifier = '';
   String secretCode = '';
 
-  final String edgeFunctionUrl =
-      'https://utypxmgyfqfwlkpkqrff.supabase.co/functions/v1/add-driver';
-
-  final String supabaseApiKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU';
+  final String edgeFunctionUrl = SupabaseConfig.addDriverFn;
+  final String supabaseApiKey = SupabaseConfig.anonKey;
 
   Future<void> saveDriver() async {
     if (!_formKey.currentState!.validate()) return;

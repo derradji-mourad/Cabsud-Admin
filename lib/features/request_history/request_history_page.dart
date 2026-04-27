@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../config/supabase_config.dart';
 import '../../theme/app_colors.dart';
 
 class RequestHistoryPage extends StatefulWidget {
@@ -16,11 +17,8 @@ class _RequestHistoryPageState extends State<RequestHistoryPage> {
   bool loading = true;
   String errorMessage = '';
 
-  final String passedServicesUrl =
-      'https://utypxmgyfqfwlkpkqrff.supabase.co/functions/v1/get-passed-services';
-
-  final String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU';
+  final String passedServicesUrl = SupabaseConfig.getPassedServicesFn;
+  final String supabaseAnonKey = SupabaseConfig.anonKey;
 
   @override
   void initState() {

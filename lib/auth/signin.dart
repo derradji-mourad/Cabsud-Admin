@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/supabase_config.dart';
+import '../layout/dashboard_layout.dart';
 import 'login.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -24,14 +27,10 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController confirmPasswordController =
       TextEditingController();
 
-  final String supabaseUrl = 'https://utypxmgyfqfwlkpkqrff.supabase.co';
-  final String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU'; // Truncated for safety
-
   @override
   void initState() {
     super.initState();
-    supabase = SupabaseClient(supabaseUrl, supabaseAnonKey);
+    supabase = SupabaseClient(SupabaseConfig.url, SupabaseConfig.anonKey);
   }
 
   @override
@@ -69,9 +68,30 @@ class _SignUpPageState extends State<SignUpPage> {
         'phone': phone,
       });
 
+      // If the project doesn't require email confirmation, signUp returns a
+      // session and the user is already authenticated — skip the login step.
+      if (signUpResponse.session != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_id', user.id);
+        await prefs.setString('email', email);
+        await prefs.setString('role', 'admin');
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Welcome! Account created.')),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardLayout()),
+        );
+        return;
+      }
+
+      // Email confirmation required — fall back to the login screen.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Admin registered successfully')),
+        const SnackBar(content: Text('Account created. Please log in.')),
       );
 
       Navigator.pushReplacement(

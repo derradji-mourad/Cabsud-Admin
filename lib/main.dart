@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/login.dart';
+import 'config/supabase_config.dart';
 import 'theme/app_theme.dart';
 
-final GlobalKey<NavigatorState> navigatorKey =
-    GlobalKey<NavigatorState>(); // 🔑 Global navigator key
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://utypxmgyfqfwlkpkqrff.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU',
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
   );
 
   runApp(const AdminApp());

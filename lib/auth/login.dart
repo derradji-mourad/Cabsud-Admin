@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/supabase_config.dart';
 import '../layout/dashboard_layout.dart';
 import '../theme/app_colors.dart';
 
@@ -26,14 +27,10 @@ class _LoginPageState extends State<LoginPage>
   bool isLoading = false;
   bool _obscurePassword = true;
 
-  final String supabaseUrl = 'https://utypxmgyfqfwlkpkqrff.supabase.co';
-  final String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU';
-
   @override
   void initState() {
     super.initState();
-    supabase = SupabaseClient(supabaseUrl, supabaseAnonKey);
+    supabase = SupabaseClient(SupabaseConfig.url, SupabaseConfig.anonKey);
 
     _animationController = AnimationController(
       vsync: this,

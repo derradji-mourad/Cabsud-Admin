@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
+import '../../config/supabase_config.dart';
 import '../../theme/app_colors.dart';
-import '../../main.dart'; // navigatorKey
 
 class QuickTripsPage extends StatefulWidget {
   const QuickTripsPage({super.key});
@@ -14,13 +13,15 @@ class QuickTripsPage extends StatefulWidget {
   State<QuickTripsPage> createState() => _QuickTripsPageState();
 }
 
-class _QuickTripsPageState extends State<QuickTripsPage> {
+class _QuickTripsPageState extends State<QuickTripsPage>
+    with WidgetsBindingObserver {
+  static const Duration _refreshInterval = Duration(seconds: 30);
+
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> quickTrips = [];
   bool _isLoading = true;
-  Timer? _pollingTimer;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  final Set<String> _notifiedTripIds = {};
+  RealtimeChannel? _channel;
+  Timer? _refreshTimer;
 
   // For driver assignment
   List<Map<String, dynamic>> _availableDrivers = [];
@@ -29,22 +30,51 @@ class _QuickTripsPageState extends State<QuickTripsPage> {
   @override
   void initState() {
     super.initState();
-    fetchQuickTrips();
-    // Poll every 10 seconds
-    _pollingTimer = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) => fetchQuickTrips(),
-    );
+    WidgetsBinding.instance.addObserver(this);
+    _loadInitial();
+    _subscribeToQuickTrips();
+    _refreshTimer = Timer.periodic(_refreshInterval, (_) => _loadInitial());
   }
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
-    _audioPlayer.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _refreshTimer?.cancel();
+    if (_channel != null) supabase.removeChannel(_channel!);
     super.dispose();
   }
 
-  Future<void> fetchQuickTrips() async {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadInitial();
+    }
+  }
+
+  void _subscribeToQuickTrips() {
+    _channel = supabase.channel('quick_trips_realtime')
+      ..onPostgresChanges(
+        event: PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'quick_trips',
+        callback: _handleInsert,
+      )
+      ..onPostgresChanges(
+        event: PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'quick_trips',
+        callback: _handleUpdate,
+      )
+      ..onPostgresChanges(
+        event: PostgresChangeEvent.delete,
+        schema: 'public',
+        table: 'quick_trips',
+        callback: _handleDelete,
+      )
+      ..subscribe();
+  }
+
+  Future<void> _loadInitial() async {
     try {
       final response = await supabase
           .from('quick_trips')
@@ -52,77 +82,81 @@ class _QuickTripsPageState extends State<QuickTripsPage> {
           .eq('status', 'pending')
           .order('created_at', ascending: false);
 
-      final newTrips = (response as List).where((trip) {
-        final id = trip['id'].toString();
-        return !_notifiedTripIds.contains(id);
-      }).toList();
-
-      if (newTrips.isNotEmpty) {
-        for (var trip in newTrips) {
-          _notifiedTripIds.add(trip['id'].toString());
-        }
-        await _playNotificationSound();
-        _showNewQuickTripDialog();
-      }
+      final list = List<Map<String, dynamic>>.from(response);
 
       if (mounted) {
         setState(() {
-          quickTrips = List<Map<String, dynamic>>.from(response);
+          quickTrips = list;
           _isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('Error fetching quick trips: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _handleInsert(PostgresChangePayload payload) {
+    final record = payload.newRecord;
+    if (record.isEmpty) return;
+    final id = record['id']?.toString();
+    if (id == null) return;
+    // Only show pending trips in this list.
+    if (record['status'] != 'pending') return;
+
+    if (mounted) {
+      setState(() {
+        quickTrips = [record, ..._removeById(quickTrips, id)];
+      });
+    }
+  }
+
+  void _handleUpdate(PostgresChangePayload payload) {
+    final record = payload.newRecord;
+    if (record.isEmpty) return;
+    final id = record['id']?.toString();
+    if (id == null) return;
+    if (!mounted) return;
+
+    // If the trip is no longer pending, remove it from the visible list.
+    if (record['status'] != 'pending') {
+      setState(() => quickTrips = _removeById(quickTrips, id));
+      return;
+    }
+
+    final next = <Map<String, dynamic>>[];
+    var replaced = false;
+    for (final t in quickTrips) {
+      if (t['id']?.toString() == id) {
+        next.add(record);
+        replaced = true;
+      } else {
+        next.add(t);
       }
     }
+    if (!replaced) next.insert(0, record);
+    setState(() => quickTrips = next);
   }
 
-  Future<void> _playNotificationSound() async {
-    try {
-      await _audioPlayer.play(AssetSource('notification.mp3'));
-    } catch (e) {
-      debugPrint("Error playing sound: $e");
-    }
+  void _handleDelete(PostgresChangePayload payload) {
+    final record = payload.oldRecord;
+    if (record.isEmpty) return;
+    final id = record['id']?.toString();
+    if (id == null) return;
+    if (!mounted) return;
+    setState(() => quickTrips = _removeById(quickTrips, id));
   }
 
-  void _showNewQuickTripDialog() {
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.secondary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.flash_on_rounded, color: Colors.orange),
-            ),
-            const SizedBox(width: 14),
-            const Text("New Quick Trip!"),
-          ],
-        ),
-        content: const Text(
-          "A new quick trip request has arrived.",
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            child: const Text("View"),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
-      ),
-    );
+  List<Map<String, dynamic>> _removeById(
+    List<Map<String, dynamic>> list,
+    String id,
+  ) {
+    return [
+      for (final t in list)
+        if (t['id']?.toString() != id) t,
+    ];
   }
+
 
   Future<void> _fetchAvailableDrivers() async {
     setState(() => _isLoadingDrivers = true);
@@ -150,18 +184,13 @@ class _QuickTripsPageState extends State<QuickTripsPage> {
     Map<String, dynamic> trip,
     Map<String, dynamic> driver,
   ) async {
-    final supabaseUrl = 'https://utypxmgyfqfwlkpkqrff.supabase.co';
-    final edgeFunctionUrl = '$supabaseUrl/functions/v1/assign_quick_trip';
-
     try {
       final response = await http.post(
-        Uri.parse(edgeFunctionUrl),
+        Uri.parse(SupabaseConfig.assignQuickTripFn),
         headers: {
           'Content-Type': 'application/json',
-          'apikey':
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU',
-          'Authorization':
-              'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eXB4bWd5ZnFmd2xrcGtxcmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNDAxMTAsImV4cCI6MjA2NTgxNjExMH0.tkNF11cJ06ZNt0dykFgu1smGEDWuT0Q4LtAmRL6wNZU',
+          'apikey': SupabaseConfig.anonKey,
+          'Authorization': 'Bearer ${SupabaseConfig.anonKey}',
         },
         body: jsonEncode({
           'driver_id': driver['id'],
@@ -179,8 +208,8 @@ class _QuickTripsPageState extends State<QuickTripsPage> {
               backgroundColor: Colors.green,
             ),
           );
-          // Refresh list to remove the assigned trip
-          fetchQuickTrips();
+          // Realtime UPDATE event will remove this trip from the list once
+          // its status flips off "pending".
         }
       } else {
         throw Exception('Failed to assign: ${response.body}');
@@ -252,26 +281,49 @@ class _QuickTripsPageState extends State<QuickTripsPage> {
     }
 
     if (quickTrips.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.flash_off_rounded,
-              size: 64,
-              color: AppColors.textSecondary.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "No Quick Trips Pending",
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 18),
-            ),
-          ],
+      return RefreshIndicator(
+        onRefresh: _loadInitial,
+        color: AppColors.gold,
+        backgroundColor: AppColors.surface,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.flash_off_rounded,
+                        size: 64,
+                        color: AppColors.textSecondary.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "No Quick Trips Pending",
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       );
     }
 
-    return ListView.builder(
+    return RefreshIndicator(
+      onRefresh: _loadInitial,
+      color: AppColors.gold,
+      backgroundColor: AppColors.surface,
+      child: ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: quickTrips.length,
       itemBuilder: (context, index) {
@@ -381,6 +433,7 @@ class _QuickTripsPageState extends State<QuickTripsPage> {
           ),
         );
       },
+      ),
     );
   }
 

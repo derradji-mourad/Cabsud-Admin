@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../features/live_requests/request_details_page.dart';
+import '../services/local_notifications_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import 'sidebar_menu.dart';
 import '../features/live_requests/live_requests_page.dart';
@@ -23,33 +25,188 @@ class _DashboardLayoutState extends State<DashboardLayout> {
   int selectedIndex = 0;
   bool _dialogShown = false;
   RealtimeChannel? _channel;
+  RealtimeChannel? _servicesNotifChannel;
+  RealtimeChannel? _quickTripsNotifChannel;
 
-  final List<String> pageTitles = const [
+  static const List<String> pageTitles = [
     "Live Requests",
     "Request History",
     "Add Driver",
     "Fare Management",
     "All Drivers",
-    "All Drivers",
     "Map Request",
     "Quick Trips",
   ];
 
-  final List<Widget> pages = [
-    const ServicesPage(),
-    const RequestHistoryPage(),
-    const AddDriverPage(),
-    const FareManagementPage(),
-    const DriversPage(),
-    const DriversPage(),
-    const LiveDriverMapPage(),
-    const QuickTripsPage(),
-  ];
+  // Pages are built lazily on first visit and kept alive via IndexedStack so
+  // navigating between them doesn't re-run initState/network fetches.
+  final Set<int> _visitedIndices = {0};
+
+  Widget _createPage(int index) {
+    switch (index) {
+      case 0:
+        return const ServicesPage();
+      case 1:
+        return const RequestHistoryPage();
+      case 2:
+        return const AddDriverPage();
+      case 3:
+        return const FareManagementPage();
+      case 4:
+        return const DriversPage();
+      case 5:
+        return const LiveDriverMapPage();
+      case 6:
+        return const QuickTripsPage();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  void _selectPage(int index) {
+    setState(() {
+      selectedIndex = index;
+      _visitedIndices.add(index);
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    // Defer plugin init until the framework is fully up — initializing in
+    // main() can race with platform-channel readiness and crash on some
+    // devices.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      LocalNotificationsService.init();
+    });
     _subscribeToDriverDeclines();
+    _subscribeToOrderNotifications();
+  }
+
+  void _subscribeToOrderNotifications() {
+    final supabase = Supabase.instance.client;
+
+    _servicesNotifChannel = supabase
+        .channel('admin_services_notifications')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'services',
+          callback: (payload) {
+            debugPrint('🔔 services INSERT received: ${payload.newRecord}');
+            _onNewService(payload);
+          },
+        )
+        ..subscribe((status, [err]) {
+          debugPrint('🔔 services channel status: $status'
+              '${err != null ? ', err: $err' : ''}');
+        });
+
+    _quickTripsNotifChannel = supabase
+        .channel('admin_quick_trips_notifications')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'quick_trips',
+          callback: (payload) {
+            debugPrint('🔔 quick_trips INSERT received: ${payload.newRecord}');
+            _onNewQuickTrip(payload);
+          },
+        )
+        ..subscribe((status, [err]) {
+          debugPrint('🔔 quick_trips channel status: $status'
+              '${err != null ? ', err: $err' : ''}');
+        });
+  }
+
+  void _onNewService(PostgresChangePayload payload) {
+    final r = payload.newRecord;
+    if (r.isEmpty) return;
+    final firstName = (r['firstname'] ?? '').toString();
+    final lastName = (r['lastname'] ?? '').toString();
+    final phone = (r['phonenumber'] ?? '').toString();
+    final pickup = (r['pickuplocation'] ?? '').toString();
+    final dropoff = (r['dropofflocation'] ?? '').toString();
+
+    final name = '$firstName $lastName'.trim();
+    final route = (pickup.isNotEmpty && dropoff.isNotEmpty)
+        ? '$pickup → $dropoff'
+        : (pickup.isNotEmpty ? pickup : dropoff);
+
+    final subtitle = [
+      if (name.isNotEmpty) name,
+      if (phone.isNotEmpty) '📞 $phone',
+      if (route.isNotEmpty) route,
+    ].join('\n');
+
+    final body = subtitle.isEmpty ? 'A new request just arrived' : subtitle;
+
+    // Always do both — in-app banner for active users, system notification
+    // for status-bar visibility / heads-up. Banner plays asset sound; system
+    // notif uses the channel's default sound.
+    NotificationService.show(
+      icon: Icons.notifications_active,
+      iconColor: AppColors.gold,
+      title: 'New Live Request',
+      subtitle: body,
+      onTap: selectedIndex == 0 ? null : () => _selectPage(0),
+    );
+    NotificationService.showAlert(
+      icon: Icons.notifications_active,
+      iconColor: AppColors.gold,
+      title: 'Live Request Received',
+      message: body,
+    );
+    LocalNotificationsService.showLiveRequest(
+      title: 'New Live Request',
+      body: body,
+    );
+  }
+
+  void _onNewQuickTrip(PostgresChangePayload payload) {
+    final r = payload.newRecord;
+    if (r.isEmpty) return;
+    if (r['status'] != null && r['status'] != 'pending') return;
+
+    final passenger = (r['passenger_name'] ?? '').toString();
+    final pickup = (r['pickup_address'] ?? '').toString();
+    final dropoff = (r['dropoff_address'] ?? '').toString();
+    final price = r['price'];
+
+    final route = (pickup.isNotEmpty && dropoff.isNotEmpty)
+        ? '$pickup → $dropoff'
+        : '';
+    final priceTag = price != null ? '\$$price' : '';
+    final subtitle = [
+      if (passenger.isNotEmpty) passenger,
+      if (priceTag.isNotEmpty) priceTag,
+      if (route.isNotEmpty) route,
+    ].join(' • ');
+
+    final body = subtitle.isEmpty ? 'A new quick trip just arrived' : subtitle;
+
+    debugPrint(
+      '🔔 firing notifications for new quick trip '
+      '(lifecycle=${WidgetsBinding.instance.lifecycleState})',
+    );
+
+    NotificationService.show(
+      icon: Icons.flash_on_rounded,
+      iconColor: Colors.orange,
+      title: 'New Quick Trip',
+      subtitle: body,
+      onTap: selectedIndex == 6 ? null : () => _selectPage(6),
+    );
+    NotificationService.showAlert(
+      icon: Icons.flash_on_rounded,
+      iconColor: Colors.orange,
+      title: 'Quick Trip Received',
+      message: body,
+    );
+    LocalNotificationsService.showQuickTrip(
+      title: 'New Quick Trip',
+      body: body,
+    );
   }
 
   void _subscribeToDriverDeclines() {
@@ -128,6 +285,8 @@ class _DashboardLayoutState extends State<DashboardLayout> {
   @override
   void dispose() {
     _channel?.unsubscribe();
+    _servicesNotifChannel?.unsubscribe();
+    _quickTripsNotifChannel?.unsubscribe();
     super.dispose();
   }
 
@@ -141,7 +300,8 @@ class _DashboardLayoutState extends State<DashboardLayout> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primary,
-      body: LayoutBuilder(
+      body: SafeArea(
+        child: LayoutBuilder(
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 800;
 
@@ -182,7 +342,7 @@ class _DashboardLayoutState extends State<DashboardLayout> {
                     selectedIndex: selectedIndex,
                     isExpanded: true, // Always expanded when visible in mobile
                     onItemSelected: (index) {
-                      setState(() => selectedIndex = index);
+                      _selectPage(index);
                       if (isSmallScreen) _toggleSidebar(); // Close on select
                     },
                     onToggleExpand: _toggleSidebar,
@@ -197,11 +357,7 @@ class _DashboardLayoutState extends State<DashboardLayout> {
                 // Sidebar
                 SidebarMenu(
                   selectedIndex: selectedIndex,
-                  onItemSelected: (index) {
-                    setState(() {
-                      selectedIndex = index;
-                    });
-                  },
+                  onItemSelected: _selectPage,
                   isExpanded: _isSidebarExpanded,
                   onToggleExpand: _toggleSidebar,
                 ),
@@ -222,12 +378,23 @@ class _DashboardLayoutState extends State<DashboardLayout> {
             );
           }
         },
+        ),
       ),
     );
   }
 
   Widget _buildPageContent({required bool isSmall}) {
     final margin = isSmall ? 8.0 : 24.0;
+
+    // One stable slot per page index. Pages mount lazily on first visit
+    // (unvisited slots are SizedBox.shrink) and stay alive afterwards so
+    // navigating between them doesn't re-run initState/network fetches.
+    final children = <Widget>[
+      for (var i = 0; i < pageTitles.length; i++)
+        _visitedIndices.contains(i)
+            ? _createPage(i)
+            : const SizedBox.shrink(),
+    ];
 
     return Container(
       margin: EdgeInsets.fromLTRB(margin, 0, margin, margin),
@@ -237,10 +404,7 @@ class _DashboardLayoutState extends State<DashboardLayout> {
         border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
       ),
       clipBehavior: Clip.antiAlias,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: pages[selectedIndex],
-      ),
+      child: IndexedStack(index: selectedIndex, children: children),
     );
   }
 
@@ -422,6 +586,8 @@ class _DashboardLayoutState extends State<DashboardLayout> {
         return 'View and manage all registered drivers';
       case 5:
         return 'Track drivers on the map in real-time';
+      case 6:
+        return 'Manage on-demand quick trip requests';
       default:
         return '';
     }
