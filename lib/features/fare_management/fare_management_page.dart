@@ -309,7 +309,7 @@ class _FareManagementPageState extends State<FareManagementPage> {
     return Column(
       children: [
         Text(
-          '\$${value.toStringAsFixed(2)}',
+          '€${value.toStringAsFixed(2)}',
           style: TextStyle(
             fontSize: isVerySmall ? 16 : 20,
             fontWeight: FontWeight.bold,

@@ -555,7 +555,7 @@ class _ServicesPageState extends State<ServicesPage>
                           ),
                         ),
                         child: Text(
-                          '\$${s['total_fare']}',
+                          '€${s['total_fare']}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,

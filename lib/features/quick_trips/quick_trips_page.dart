@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/supabase_config.dart';
 import '../../theme/app_colors.dart';
 
@@ -83,6 +84,10 @@ class _QuickTripsPageState extends State<QuickTripsPage>
           .order('created_at', ascending: false);
 
       final list = List<Map<String, dynamic>>.from(response);
+
+      if (list.isNotEmpty) {
+        debugPrint('quick_trips row keys: ${list.first.keys.toList()}');
+      }
 
       if (mounted) {
         setState(() {
@@ -344,6 +349,7 @@ class _QuickTripsPageState extends State<QuickTripsPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
@@ -359,17 +365,30 @@ class _QuickTripsPageState extends State<QuickTripsPage>
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        trip['passenger_name'] ?? 'Unknown',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            trip['passenger_name'] ?? 'Unknown',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          if (_extractPhone(trip).isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            _buildPhonePill(_extractPhone(trip)),
+                          ],
+                        ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
-                      "\$${trip['price']?.toString() ?? '0'}",
+                      "€${trip['price']?.toString() ?? '0'}",
                       style: const TextStyle(
                         color: Colors.orange,
                         fontSize: 18,
@@ -461,6 +480,81 @@ class _QuickTripsPageState extends State<QuickTripsPage>
         ),
       ],
     );
+  }
+
+  String _extractPhone(Map<String, dynamic> trip) {
+    const candidates = [
+      'passenger_phone',
+      'phone',
+      'phonenumber',
+      'phone_number',
+      'passenger_phonenumber',
+      'passenger_phone_number',
+      'contact',
+      'contact_phone',
+    ];
+    for (final k in candidates) {
+      final v = trip[k];
+      if (v != null && v.toString().trim().isNotEmpty) {
+        return v.toString().trim();
+      }
+    }
+    return '';
+  }
+
+  Widget _buildPhonePill(String phone) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: () => _callPhone(phone),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.success.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: AppColors.success.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.phone, size: 14, color: AppColors.success),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  phone,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _callPhone(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    try {
+      final ok = await launchUrl(uri);
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open dialer')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Could not launch dialer: $e');
+    }
   }
 
   Widget _buildTag(IconData icon, String text, {bool isPayment = false}) {

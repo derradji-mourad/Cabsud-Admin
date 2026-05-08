@@ -1,8 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../config/supabase_config.dart';
 import '../layout/dashboard_layout.dart';
 import 'login.dart';
 
@@ -15,7 +15,7 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
-  late SupabaseClient supabase;
+  final SupabaseClient supabase = Supabase.instance.client;
 
   String email = '';
   String fullName = '';
@@ -28,16 +28,21 @@ class _SignUpPageState extends State<SignUpPage> {
       TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    supabase = SupabaseClient(SupabaseConfig.url, SupabaseConfig.anonKey);
-  }
-
-  @override
   void dispose() {
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 6),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> handleSignUp() async {
@@ -45,67 +50,88 @@ class _SignUpPageState extends State<SignUpPage> {
     _formKey.currentState!.save();
 
     if (passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
+      _showError('Passwords do not match');
       return;
     }
 
     setState(() => isLoading = true);
 
+    AuthResponse? signUpResponse;
     try {
-      final signUpResponse = await supabase.auth.signUp(
+      signUpResponse = await supabase.auth.signUp(
         email: email,
         password: passwordController.text.trim(),
       );
+    } on AuthException catch (e, st) {
+      debugPrint('SignUp AuthException: ${e.message} (status=${e.statusCode})\n$st');
+      _showError('Sign up failed: ${e.message}');
+      if (mounted) setState(() => isLoading = false);
+      return;
+    } catch (e, st) {
+      debugPrint('SignUp error: $e\n$st');
+      _showError('Sign up failed: $e');
+      if (mounted) setState(() => isLoading = false);
+      return;
+    }
 
-      final user = signUpResponse.user;
-      if (user == null) throw Exception('Sign up failed');
+    final user = signUpResponse.user;
+    if (user == null) {
+      _showError('Sign up failed: no user returned');
+      if (mounted) setState(() => isLoading = false);
+      return;
+    }
 
+    // Insert admin profile row. Don't fail the whole sign-up if this errors
+    // (e.g. RLS) — the auth account was created successfully and we can
+    // surface the profile error separately.
+    try {
       await supabase.from('admin').insert({
         'user_id': user.id,
         'full_name': fullName,
         'phone': phone,
       });
+    } on PostgrestException catch (e, st) {
+      debugPrint('admin insert PostgrestException: ${e.message} '
+          '(code=${e.code}, details=${e.details})\n$st');
+      _showError('Account created, but profile save failed: ${e.message}');
+    } catch (e, st) {
+      debugPrint('admin insert error: $e\n$st');
+      _showError('Account created, but profile save failed: $e');
+    }
 
-      // If the project doesn't require email confirmation, signUp returns a
-      // session and the user is already authenticated — skip the login step.
-      if (signUpResponse.session != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_id', user.id);
-        await prefs.setString('email', email);
-        await prefs.setString('role', 'admin');
+    // If the project doesn't require email confirmation, signUp returns a
+    // session and the user is already authenticated — skip the login step.
+    if (signUpResponse.session != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', user.id);
+      await prefs.setString('email', email);
+      await prefs.setString('role', 'admin');
 
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Welcome! Account created.')),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const DashboardLayout()),
-        );
-        return;
-      }
-
-      // Email confirmation required — fall back to the login screen.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created. Please log in.')),
+        const SnackBar(content: Text('Welcome! Account created.')),
       );
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
+        MaterialPageRoute(builder: (_) => const DashboardLayout()),
       );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    } finally {
-      if (mounted) setState(() => isLoading = false);
+      return;
     }
+
+    // Email confirmation required — fall back to the login screen.
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Account created. Check your email to confirm, then log in.'),
+        duration: Duration(seconds: 6),
+      ),
+    );
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+    );
   }
 
   @override

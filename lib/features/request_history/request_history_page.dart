@@ -321,7 +321,7 @@ class _RequestHistoryPageState extends State<RequestHistoryPage> {
                               ),
                               const Spacer(),
                               Text(
-                                '\$${item['total_fare']}',
+                                '€${item['total_fare']}',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/live_requests/request_details_page.dart';
 import '../services/local_notifications_service.dart';
 import '../services/notification_service.dart';
+import '../services/push_notification_service.dart';
 import '../theme/app_colors.dart';
 import 'sidebar_menu.dart';
 import '../features/live_requests/live_requests_page.dart';
@@ -76,8 +77,9 @@ class _DashboardLayoutState extends State<DashboardLayout> {
     // Defer plugin init until the framework is fully up — initializing in
     // main() can race with platform-channel readiness and crash on some
     // devices.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      LocalNotificationsService.init();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await LocalNotificationsService.init();
+      await PushNotificationService.setup();
     });
     _subscribeToDriverDeclines();
     _subscribeToOrderNotifications();
@@ -176,7 +178,7 @@ class _DashboardLayoutState extends State<DashboardLayout> {
     final route = (pickup.isNotEmpty && dropoff.isNotEmpty)
         ? '$pickup → $dropoff'
         : '';
-    final priceTag = price != null ? '\$$price' : '';
+    final priceTag = price != null ? '€$price' : '';
     final subtitle = [
       if (passenger.isNotEmpty) passenger,
       if (priceTag.isNotEmpty) priceTag,

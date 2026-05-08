@@ -3,17 +3,87 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/login.dart';
 import 'config/supabase_config.dart';
+import 'layout/dashboard_layout.dart';
 import 'theme/app_theme.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  print('Background notification: ${message.messageId}');
+}
+
+Future<void> registerAdminPushToken() async {
+  try {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      print('No logged-in admin found. Cannot save FCM token.');
+      return;
+    }
+
+    final messaging = FirebaseMessaging.instance;
+
+    await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    final token = await messaging.getToken();
+
+    if (token == null) {
+      print('FCM token is null.');
+      return;
+    }
+
+    await supabase.from('admin').update({
+      'fcm_token': token,
+      'fcm_token_updated_at': DateTime.now().toIso8601String(),
+    }).eq('user_id', user.id);
+
+    print('Admin FCM token saved successfully.');
+
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+      await supabase.from('admin').update({
+        'fcm_token': newToken,
+        'fcm_token_updated_at': DateTime.now().toIso8601String(),
+      }).eq('user_id', user.id);
+
+      print('Admin FCM token refreshed successfully.');
+    });
+  } catch (e) {
+    print('Error saving admin FCM token: $e');
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.anonKey,
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Don't let a slow/failing Supabase init keep the native launch screen up
+  // forever. Bound it with a timeout and surface errors instead of hanging.
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.url,
+      anonKey: SupabaseConfig.anonKey,
+    ).timeout(const Duration(seconds: 8));
+  } catch (e, st) {
+    debugPrint('Supabase.initialize failed or timed out: $e\n$st');
+  }
 
   runApp(const AdminApp());
 }
@@ -28,7 +98,43 @@ class AdminApp extends StatelessWidget {
       title: 'Cabsud Admin Dashboard',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const LoginPage(), // Or DashboardLayout() after login
+      home: const AuthGate(),
+    );
+  }
+}
+
+/// Picks the right starting screen based on the persisted Supabase session
+/// and follows auth changes (sign-in / sign-out) for the lifetime of the app.
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  late final Stream<AuthState> _authStream;
+  Session? _session;
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = Supabase.instance.client.auth;
+    _session = auth.currentSession;
+    _authStream = auth.onAuthStateChange;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: _authStream,
+      builder: (context, snapshot) {
+        final session = snapshot.data?.session ?? _session;
+        if (session != null) {
+          return const DashboardLayout();
+        }
+        return const LoginPage();
+      },
     );
   }
 }
