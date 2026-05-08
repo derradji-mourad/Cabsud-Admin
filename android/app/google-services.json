@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "854124715061",
+    "project_id": "cabsud-735c5",
+    "storage_bucket": "cabsud-735c5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:854124715061:android:8862f660d848d60471257c",
+        "android_client_info": {
+          "package_name": "com.example.cabsudadminn"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATzw8_An9DRr0bqoRH8Q-GuhdoA_HPfr8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

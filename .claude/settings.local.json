@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/c/Users/Djana-Info/AppData/Local/Android/sdk/platform-tools/adb.exe -s emulator-5554 shell pm list packages)",
+      "Bash(/c/Users/Djana-Info/AppData/Local/Android/sdk/platform-tools/adb.exe devices *)",
+      "Bash(/c/Users/Djana-Info/AppData/Local/Android/sdk/platform-tools/adb.exe *)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter build *)",
+      "Bash(wmic logicaldisk *)",
+      "Bash(flutter clean *)",
+      "Bash(flutter pub *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Djana-Info\\\\StudioProjects\\\\Cabsud-Admin\" -Directory)",
+      "Bash(Select-Object Name)"
+    ]
+  }
+}
