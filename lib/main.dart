@@ -20,51 +20,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('Background notification: ${message.messageId}');
 }
 
-Future<void> registerAdminPushToken() async {
-  try {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-
-    if (user == null) {
-      print('No logged-in admin found. Cannot save FCM token.');
-      return;
-    }
-
-    final messaging = FirebaseMessaging.instance;
-
-    await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    final token = await messaging.getToken();
-
-    if (token == null) {
-      print('FCM token is null.');
-      return;
-    }
-
-    await supabase.from('admin').update({
-      'fcm_token': token,
-      'fcm_token_updated_at': DateTime.now().toIso8601String(),
-    }).eq('user_id', user.id);
-
-    print('Admin FCM token saved successfully.');
-
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      await supabase.from('admin').update({
-        'fcm_token': newToken,
-        'fcm_token_updated_at': DateTime.now().toIso8601String(),
-      }).eq('user_id', user.id);
-
-      print('Admin FCM token refreshed successfully.');
-    });
-  } catch (e) {
-    print('Error saving admin FCM token: $e');
-  }
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

@@ -10,21 +10,27 @@ class PushNotificationService {
   static Future<void> setup() async {
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      debugPrint('FCM setup: no logged-in user, skipping');
+      return;
+    }
+    debugPrint('FCM setup: starting for user ${user.id}');
 
     final messaging = FirebaseMessaging.instance;
 
-    await messaging.requestPermission(
+    final settings = await messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+    debugPrint('FCM setup: permission=${settings.authorizationStatus}');
 
     final token = await messaging.getToken();
     if (token == null) {
-      debugPrint('FCM: no token available');
+      debugPrint('FCM setup: getToken() returned null');
       return;
     }
+    debugPrint('FCM setup: got token (${token.length} chars)');
 
     await _saveToken(token, userId: user.id);
 
@@ -54,11 +60,25 @@ class PushNotificationService {
 
   static Future<void> _saveToken(String token, {required String userId}) async {
     try {
-      await Supabase.instance.client
-          .from('profiles')
-          .update({'fcm_token': token})
-          .eq('id', userId);
-      debugPrint('FCM token saved for user $userId');
+      // .select() forces PostgREST to return the updated rows so we can detect
+      // RLS-induced 0-row updates (which otherwise look identical to success).
+      final rows = await Supabase.instance.client
+          .from('admin')
+          .update({
+            'fcm_token': token,
+            'fcm_token_updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('user_id', userId)
+          .select('user_id');
+      if (rows.isEmpty) {
+        debugPrint(
+          'FCM token NOT saved: 0 admin rows matched user_id=$userId. '
+          'Either no admin row exists for this user, or RLS on public.admin '
+          'is blocking the UPDATE.',
+        );
+      } else {
+        debugPrint('FCM token saved for admin $userId (${rows.length} row)');
+      }
     } catch (e) {
       debugPrint('FCM token save failed: $e');
     }

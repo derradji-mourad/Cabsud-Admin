@@ -29,9 +29,34 @@ class LocalNotificationsService {
     await _plugin.initialize(settings: initSettings);
     debugPrint('🔔 local notifications plugin initialized');
 
-    // Android 13+ runtime permission.
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
+
+    // Create channels eagerly so FCM can render notifications using them when
+    // the app is in the background or terminated — channels created lazily on
+    // first `_show` don't exist yet on a fresh install.
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _liveRequestsChannelId,
+        'New Live Requests',
+        description: 'Notifications for new live ride requests',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _quickTripsChannelId,
+        'New Quick Trips',
+        description: 'Notifications for new quick trips',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
+
+    // Android 13+ runtime permission.
     try {
       final granted = await android?.requestNotificationsPermission();
       debugPrint('🔔 POST_NOTIFICATIONS permission granted=$granted');

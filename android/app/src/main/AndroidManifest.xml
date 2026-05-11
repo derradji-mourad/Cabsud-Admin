@@ -50,6 +50,16 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- FCM default notification channel + icon (Android 8+). Used when a
+             message arrives while the app is terminated and no channel_id is
+             specified, or as a fallback before our channels are created. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="orders_live_requests" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
     </application>
 
     <!-- Queries: text processing + URL launching (Android 11+ visibility) -->
